@@ -198,7 +198,7 @@ extc int _export cdecl ODBG_Pluginmenu(int origin,char data[4096],void *item)
 { 
 	if(origin != PM_MAIN) 
 		return 0; 
-	strcpy(data,"0 &DumpMemory2File|1 &About"); 
+	strcpy_s(data,28,"0 &DumpMemory2File|1 &About"); 
 	return 1; 
 }
 
