@@ -10,6 +10,8 @@
 
 HINSTANCE g_hInstance;
 HWND	g_OllyDBGHWND;
+
+void ShowLastErrorMessage(HWND hWnd);
 //Input Dialog
 
 /*
@@ -21,8 +23,7 @@ char * ObtainDataFromMemory(DWORD dwBeginAddr,DWORD dwEndAddr,int type,DWORD *dw
 	DWORD dwLen2Read=0;
 	char * outbuf=(char*)0;
 	unsigned int ret=0;
-	if(type==0)
-	{
+	if(type==0)	{
 		if(dwEndAddr<=dwBeginAddr)
 			return (char*)0;
 
@@ -30,13 +31,13 @@ char * ObtainDataFromMemory(DWORD dwBeginAddr,DWORD dwEndAddr,int type,DWORD *dw
 		*dwReaded=dwLen2Read;
 		outbuf=(char*)malloc(dwLen2Read);
 		ret=Readmemory(outbuf,dwBeginAddr,dwLen2Read,MM_RESILENT);
-		if(ret==0)
-		{
+		if(ret==0) {
 			free(outbuf);
 		}
 		else
 			return outbuf;
-	}else if(type==1){
+	}
+    else if(type==1) {
 		//read the memory as a PE file
 		if(is_pefile((char*)dwBeginAddr))
 		{
@@ -55,12 +56,12 @@ DWORD GetAddress(HWND hWnd,UINT uID)
 	int ret=0;
 
 	ret=GetDlgItemText(hWnd,uID,szAddress,256);
-	if(ret!=0){
+	if(ret!=0) {
 		char *padd=strchr(szAddress,'+');
-		if(padd==NULL){
+		if(padd==NULL) {
 			dwAddress=strtol(szAddress,NULL,16);
 		}
-		else{
+		else {
 			char *add="+";
 			dwAddress=strtol(szAddress,&add,16);
 			dwAdd=strtol(padd+1,NULL,16);
@@ -78,12 +79,10 @@ BOOL CALLBACK MainDlgProc(HWND hWnd,UINT msg,WPARAM wParam,LPARAM lParam)
 	{
 	case WM_INITDIALOG:
 		{
-			//SetWindowPos(hWnd,HWND_TOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE);
 			status= SendDlgItemMessage(hWnd,IDC_CK_PE,BM_GETCHECK,0,0);
 			EnableWindow(GetDlgItem(hWnd,IDC_ET_END),!status);
 			return TRUE;
 		}
-
 		break;
 	case WM_COMMAND:
 		{
@@ -103,8 +102,7 @@ BOOL CALLBACK MainDlgProc(HWND hWnd,UINT msg,WPARAM wParam,LPARAM lParam)
 						dwBeginAddress=GetAddress(hWnd,IDC_ET_BEGIN);
 
 						status= SendDlgItemMessage(hWnd,IDC_CK_PE,BM_GETCHECK,0,0);
-						if(!status)
-						{
+						if(!status)	{
 							dwEndAddress=GetAddress(hWnd,IDC_ET_END);
 						}
 
@@ -112,21 +110,31 @@ BOOL CALLBACK MainDlgProc(HWND hWnd,UINT msg,WPARAM wParam,LPARAM lParam)
 						pMemory=ObtainDataFromMemory(dwBeginAddress,dwEndAddress,status,&dwReaded);
 						if(pMemory!=NULL)
 						{
-							HANDLE hFile=CreateFileA(szFile,GENERIC_WRITE,FILE_SHARE_READ,
-								NULL,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
-							if(hFile!=NULL){
-								if(!WriteFile(hFile,pMemory,dwReaded,&dwWrited,NULL))
-								{
+                            HANDLE hFile=CreateFileA(szFile,
+                                                    GENERIC_WRITE,
+                                                    FILE_SHARE_READ,
+								                    NULL,
+                                                    CREATE_ALWAYS,
+                                                    FILE_ATTRIBUTE_NORMAL,NULL);
+
+							if(hFile != INVALID_HANDLE_VALUE) {
+								if(!WriteFile(hFile,pMemory,dwReaded,&dwWrited,NULL)){
 									MessageBoxA(hWnd,"Write Failed","ODDM",MB_OK|MB_ICONWARNING);
 								}
+                                else {
+                                    ShowLastErrorMessage(hWnd);
+                                }
 								CloseHandle(hFile);
 							}
+                            else {
+                                ShowLastErrorMessage(hWnd);
+                            }
 
 							free(pMemory);
 							pMemory=NULL;
 						}
-	
 					}
+
 					EndDialog(hWnd,IDYES);
 				}
 				break;
@@ -213,8 +221,7 @@ extc void _export cdecl ODBG_Pluginaction(int origin,int action,void *item)
 			case 0:
 				{
 					int ret=0;
-					if((ret=Plugingetvalue(VAL_HPROCESS))==0)
-					{
+					if((ret=Plugingetvalue(VAL_HPROCESS))==0) {
 						MessageBoxA(g_OllyDBGHWND,"No exefile is debuged","ODDM2File",MB_OK|MB_ICONWARNING);
 						return;
 					}
@@ -242,4 +249,13 @@ extc void _export cdecl ODBG_Pluginaction(int origin,int action,void *item)
 		break;
 	}
 	
+}
+
+
+// ´íÎóÏûÏ¢ÏÔÊ¾
+void ShowLastErrorMessage(HWND hWnd) {
+    DWORD dwErrorCode = GetLastError();
+    char * buffer = (char*)0;
+    FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwErrorCode, 0, (LPSTR)&buffer, 0, NULL);
+    MessageBoxA(hWnd, buffer, "WriteFile", MB_OK|MB_ICONERROR);
 }

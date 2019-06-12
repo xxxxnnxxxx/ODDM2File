@@ -2,12 +2,6 @@
 #include "_pe.h"
 #include <Plugin.h>
 
-
-
-
-
-
-
 int	is_pefile(char *pebase)
 {
 	int	ret=0;
